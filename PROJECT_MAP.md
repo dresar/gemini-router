@@ -16,6 +16,7 @@ Production-grade Gemini API Key Router, Load Balancer, Parallel Tester, and anti
 - `migrations/0001_init.sql`: SQLite schema for `api_keys` and `system_settings`.
 - `static/`: Frontend dashboard (`index.html`, `style.css`, `app.js`).
 - `src/`:
+  - `lib.rs`: Library root exporting admin, config, database, gemini, and key_manager.
   - `main.rs`: Entrypoint, server boot, graceful shutdown.
   - `config/`: Environment configuration and masking utilities.
   - `database/`: SQLx connection pool & migrations runner.
@@ -28,7 +29,9 @@ Production-grade Gemini API Key Router, Load Balancer, Parallel Tester, and anti
   - `admin/`: REST endpoints for dashboard, bulk import, test triggers, and constant-time auth.
   - `middleware/`: Security, logging with key masking, CORS.
   - `monitoring/`: Real-time telemetry, SSE broadcast channel.
-- `tests/`: WireMock test suite for mock upstream Gemini tests.
+- `tests/`:
+  - `backend_core_tests.rs`: Core unit & integration test suite for database, key repository, auth, and masking.
+  - WireMock test suite for mock upstream Gemini tests.
 
 ### Roles & Branch Owners
 - AGY01 (Lead Orchestrator): Architecture, worktree coordination, integration merge.
