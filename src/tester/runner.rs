@@ -2,7 +2,6 @@ use crate::gemini::types::{KeyRecord, KeyStatus, SystemEvent};
 use crate::key_manager::KeyManager;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::sync::{broadcast, Semaphore};
@@ -74,8 +73,7 @@ impl FastTester {
 
         match status_code {
             200 => (KeyStatus::Active, None),
-            400 => (KeyStatus::Invalid, None),
-            401 => (KeyStatus::Invalid, None),
+            400 | 401 => (KeyStatus::Invalid, None),
             403 => (KeyStatus::BillingError, None),
             429 => {
                 if body_lower.contains("per day")
@@ -108,32 +106,13 @@ impl FastTester {
     }
 
     pub async fn test_single_key(&self, key: &KeyRecord) -> TestResult {
-        let url = format!(
-            "{}/v1beta/models/{}:generateContent?key={}",
-            self.base_url.trim_end_matches('/'),
-            self.model,
-            key.api_key
-        );
-
-        let payload = json!({
-            "contents": [
-                {
-                    "parts": [
-                        {"text": "ping"}
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "maxOutputTokens": 1
-            }
-        });
+        let url = format!("{}/v1beta/models?key={}", self.base_url.trim_end_matches('/'), key.api_key);
 
         let start = std::time::Instant::now();
         let response_res = self
             .http_client
-            .post(&url)
+            .get(&url)
             .header("x-goog-api-key", &key.api_key)
-            .json(&payload)
             .send()
             .await;
         let latency_ms = start.elapsed().as_millis() as u64;
