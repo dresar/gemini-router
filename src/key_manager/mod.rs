@@ -7,11 +7,12 @@ use crate::gemini::types::{KeyRecord, KeyStatus, KeyView};
 use chrono::{DateTime, Utc};
 use parking_lot::RwLock;
 use sqlx::SqlitePool;
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct KeyManager {
     pool: SqlitePool,
-    keys: RwLock<Vec<KeyRecord>>,
+    keys: Arc<RwLock<Vec<KeyRecord>>>,
 }
 
 impl KeyManager {
@@ -19,8 +20,12 @@ impl KeyManager {
         let keys = repository::get_all_keys(&pool).await?;
         Ok(Self {
             pool,
-            keys: RwLock::new(keys),
+            keys: Arc::new(RwLock::new(keys)),
         })
+    }
+
+    pub fn shared_keys(&self) -> Arc<RwLock<Vec<KeyRecord>>> {
+        Arc::clone(&self.keys)
     }
 
     pub fn get_keys(&self) -> Vec<KeyRecord> {

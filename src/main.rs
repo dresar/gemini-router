@@ -55,22 +55,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     let strategy = StrategyType::from_str_loose(&config.default_strategy);
-    let rotation_engine = Arc::new(RotationEngine::new(
-        key_mgr.clone(),
-        strategy,
-        config.cooldown_rate_limit_secs,
-        config.cooldown_quota_hours,
-    ));
+    let rotation_engine = Arc::new(
+        RotationEngine::new(key_mgr.shared_keys())
+            .with_key_manager(key_mgr.clone())
+            .with_strategy(strategy),
+    );
 
     let (event_tx, _) = tokio::sync::broadcast::channel(256);
 
-    let tester = Arc::new(FastTester::new(
-        http_client.clone(),
-        key_mgr.clone(),
-        event_tx.clone(),
-        config.tester_concurrency,
-        config.gemini_base_url.clone(),
-    ));
+    let tester = Arc::new(
+        FastTester::new(
+            http_client.clone(),
+            key_mgr.clone(),
+            Some(event_tx.clone()),
+        )
+        .with_concurrency(config.tester_concurrency)
+        .with_base_url(config.gemini_base_url.clone()),
+    );
 
     let state = Arc::new(AppState {
         config: config.clone(),

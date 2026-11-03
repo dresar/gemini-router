@@ -34,6 +34,7 @@ Production-grade Gemini API Key Router, Load Balancer, Parallel Tester, and anti
   - `monitoring/`: Real-time telemetry, SSE broadcast channel.
 - `tests/`:
   - `backend_core_tests.rs`: Core unit & integration test suite for database, key repository, auth, and masking.
+  - `rotation_and_tester_tests.rs`: Rotation strategies, cooldown recovery, 429 classification, failover, and parallel tester mock suite.
   - `proxy_mock_tests.rs`: WireMock integration test suite for generateContent, SSE streaming, failover on 429, tools preservation, and admin auth protection.
 
 ### Roles & Branch Owners

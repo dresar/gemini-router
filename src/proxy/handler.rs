@@ -1,4 +1,3 @@
-use crate::gemini::types::KeyStatus;
 use crate::streaming::create_sse_response;
 use crate::AppState;
 use axum::body::Bytes;
@@ -76,17 +75,19 @@ async fn forward_list_models(
 ) -> Response {
     let retry_budget = state.config.retry_budget.max(1);
     let mut last_error_response = None;
+    let mut tried_keys = std::collections::HashSet::new();
 
     for _attempt in 0..retry_budget {
-        let key = match state.rotation_engine.select_key() {
-            Ok(k) => k,
-            Err(e) => {
+        let strategy = state.rotation_engine.get_strategy();
+        let key = match state.rotation_engine.select_key_excluding(strategy, &tried_keys) {
+            Some(k) => k,
+            None => {
                 return (
                     StatusCode::SERVICE_UNAVAILABLE,
                     Json(json!({
                         "error": {
                             "code": 503,
-                            "message": e,
+                            "message": "No active API keys available for rotation",
                             "status": "UNAVAILABLE"
                         }
                     })),
@@ -94,6 +95,7 @@ async fn forward_list_models(
                     .into_response();
             }
         };
+        tried_keys.insert(key.id.clone());
 
         let base_url = state.config.gemini_base_url.trim_end_matches('/');
         let mut target_url = format!("{base_url}/{api_version}/models");
@@ -120,11 +122,7 @@ async fn forward_list_models(
                 if status == StatusCode::TOO_MANY_REQUESTS {
                     state
                         .rotation_engine
-                        .record_failover(&key.id, KeyStatus::RateLimited, Some("Rate limited 429".into()))
-                        .await;
-                    let _ = state
-                        .key_manager
-                        .record_request_outcome(&key.id, false, latency_ms, true, false)
+                        .record_result(&key.id, false, latency_ms, Some("HTTP 429: Rate limited"))
                         .await;
                     last_error_response = Some((
                         StatusCode::TOO_MANY_REQUESTS,
@@ -136,11 +134,7 @@ async fn forward_list_models(
                 if status == StatusCode::SERVICE_UNAVAILABLE {
                     state
                         .rotation_engine
-                        .record_failover(&key.id, KeyStatus::TemporaryError, Some("Service unavailable 503".into()))
-                        .await;
-                    let _ = state
-                        .key_manager
-                        .record_request_outcome(&key.id, false, latency_ms, false, false)
+                        .record_result(&key.id, false, latency_ms, Some("HTTP 503: Service Unavailable"))
                         .await;
                     last_error_response = Some((
                         StatusCode::SERVICE_UNAVAILABLE,
@@ -149,9 +143,9 @@ async fn forward_list_models(
                     continue;
                 }
 
-                let _ = state
-                    .key_manager
-                    .record_request_outcome(&key.id, status.is_success(), latency_ms, false, false)
+                state
+                    .rotation_engine
+                    .record_result(&key.id, status.is_success(), latency_ms, None)
                     .await;
 
                 return build_safe_response(res, &key.api_key, &key.masked_key).await;
@@ -159,7 +153,7 @@ async fn forward_list_models(
             Err(e) => {
                 state
                     .rotation_engine
-                    .record_failover(&key.id, KeyStatus::TemporaryError, Some(e.to_string()))
+                    .record_result(&key.id, false, latency_ms, Some(&e.to_string()))
                     .await;
                 last_error_response = Some((
                     StatusCode::BAD_GATEWAY,
@@ -186,17 +180,19 @@ async fn forward_get_model(
 ) -> Response {
     let retry_budget = state.config.retry_budget.max(1);
     let mut last_error_response = None;
+    let mut tried_keys = std::collections::HashSet::new();
 
     for _attempt in 0..retry_budget {
-        let key = match state.rotation_engine.select_key() {
-            Ok(k) => k,
-            Err(e) => {
+        let strategy = state.rotation_engine.get_strategy();
+        let key = match state.rotation_engine.select_key_excluding(strategy, &tried_keys) {
+            Some(k) => k,
+            None => {
                 return (
                     StatusCode::SERVICE_UNAVAILABLE,
                     Json(json!({
                         "error": {
                             "code": 503,
-                            "message": e,
+                            "message": "No active API keys available for rotation",
                             "status": "UNAVAILABLE"
                         }
                     })),
@@ -204,6 +200,7 @@ async fn forward_get_model(
                     .into_response();
             }
         };
+        tried_keys.insert(key.id.clone());
 
         let base_url = state.config.gemini_base_url.trim_end_matches('/');
         let mut target_url = format!("{base_url}/{api_version}/models/{path}");
@@ -230,11 +227,7 @@ async fn forward_get_model(
                 if status == StatusCode::TOO_MANY_REQUESTS {
                     state
                         .rotation_engine
-                        .record_failover(&key.id, KeyStatus::RateLimited, Some("Rate limited 429".into()))
-                        .await;
-                    let _ = state
-                        .key_manager
-                        .record_request_outcome(&key.id, false, latency_ms, true, false)
+                        .record_result(&key.id, false, latency_ms, Some("HTTP 429: Rate limited"))
                         .await;
                     last_error_response = Some((
                         StatusCode::TOO_MANY_REQUESTS,
@@ -246,11 +239,7 @@ async fn forward_get_model(
                 if status == StatusCode::SERVICE_UNAVAILABLE {
                     state
                         .rotation_engine
-                        .record_failover(&key.id, KeyStatus::TemporaryError, Some("Service unavailable 503".into()))
-                        .await;
-                    let _ = state
-                        .key_manager
-                        .record_request_outcome(&key.id, false, latency_ms, false, false)
+                        .record_result(&key.id, false, latency_ms, Some("HTTP 503: Service Unavailable"))
                         .await;
                     last_error_response = Some((
                         StatusCode::SERVICE_UNAVAILABLE,
@@ -259,9 +248,9 @@ async fn forward_get_model(
                     continue;
                 }
 
-                let _ = state
-                    .key_manager
-                    .record_request_outcome(&key.id, status.is_success(), latency_ms, false, false)
+                state
+                    .rotation_engine
+                    .record_result(&key.id, status.is_success(), latency_ms, None)
                     .await;
 
                 return build_safe_response(res, &key.api_key, &key.masked_key).await;
@@ -269,7 +258,7 @@ async fn forward_get_model(
             Err(e) => {
                 state
                     .rotation_engine
-                    .record_failover(&key.id, KeyStatus::TemporaryError, Some(e.to_string()))
+                    .record_result(&key.id, false, latency_ms, Some(&e.to_string()))
                     .await;
                 last_error_response = Some((
                     StatusCode::BAD_GATEWAY,
@@ -304,17 +293,19 @@ async fn forward_model_action(
 
     let retry_budget = state.config.retry_budget.max(1);
     let mut last_error_response = None;
+    let mut tried_keys = std::collections::HashSet::new();
 
     for _attempt in 0..retry_budget {
-        let key = match state.rotation_engine.select_key() {
-            Ok(k) => k,
-            Err(e) => {
+        let strategy = state.rotation_engine.get_strategy();
+        let key = match state.rotation_engine.select_key_excluding(strategy, &tried_keys) {
+            Some(k) => k,
+            None => {
                 return (
                     StatusCode::SERVICE_UNAVAILABLE,
                     Json(json!({
                         "error": {
                             "code": 503,
-                            "message": e,
+                            "message": "No active API keys available for rotation",
                             "status": "UNAVAILABLE"
                         }
                     })),
@@ -322,6 +313,7 @@ async fn forward_model_action(
                     .into_response();
             }
         };
+        tried_keys.insert(key.id.clone());
 
         let base_url = state.config.gemini_base_url.trim_end_matches('/');
         let mut target_url = format!("{base_url}/{api_version}/models/{path}");
@@ -367,11 +359,7 @@ async fn forward_model_action(
                 if status == StatusCode::TOO_MANY_REQUESTS {
                     state
                         .rotation_engine
-                        .record_failover(&key.id, KeyStatus::RateLimited, Some("Rate limited 429".into()))
-                        .await;
-                    let _ = state
-                        .key_manager
-                        .record_request_outcome(&key.id, false, latency_ms, true, false)
+                        .record_result(&key.id, false, latency_ms, Some("HTTP 429: Rate limited"))
                         .await;
                     last_error_response = Some((
                         StatusCode::TOO_MANY_REQUESTS,
@@ -390,11 +378,7 @@ async fn forward_model_action(
                 if status == StatusCode::SERVICE_UNAVAILABLE {
                     state
                         .rotation_engine
-                        .record_failover(&key.id, KeyStatus::TemporaryError, Some("Service unavailable 503".into()))
-                        .await;
-                    let _ = state
-                        .key_manager
-                        .record_request_outcome(&key.id, false, latency_ms, false, false)
+                        .record_result(&key.id, false, latency_ms, Some("HTTP 503: Service Unavailable"))
                         .await;
                     last_error_response = Some((
                         StatusCode::SERVICE_UNAVAILABLE,
@@ -409,9 +393,9 @@ async fn forward_model_action(
                     continue;
                 }
 
-                let _ = state
-                    .key_manager
-                    .record_request_outcome(&key.id, status.is_success(), latency_ms, false, false)
+                state
+                    .rotation_engine
+                    .record_result(&key.id, status.is_success(), latency_ms, None)
                     .await;
 
                 // If streaming and success, return SSE stream without buffering
@@ -425,7 +409,7 @@ async fn forward_model_action(
             Err(e) => {
                 state
                     .rotation_engine
-                    .record_failover(&key.id, KeyStatus::TemporaryError, Some(e.to_string()))
+                    .record_result(&key.id, false, latency_ms, Some(&e.to_string()))
                     .await;
                 last_error_response = Some((
                     StatusCode::BAD_GATEWAY,

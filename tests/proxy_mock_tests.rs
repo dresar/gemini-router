@@ -27,20 +27,21 @@ async fn setup_test_server(mock_server: &MockServer) -> (String, Arc<AppState>) 
     let http_client = reqwest::Client::new();
     let (event_tx, _) = tokio::sync::broadcast::channel(100);
 
-    let rotation_engine = Arc::new(RotationEngine::new(
-        key_mgr.clone(),
-        StrategyType::RoundRobin,
-        1,
-        1,
-    ));
+    let rotation_engine = Arc::new(
+        RotationEngine::new(key_mgr.shared_keys())
+            .with_key_manager(key_mgr.clone())
+            .with_strategy(StrategyType::RoundRobin),
+    );
 
-    let tester = Arc::new(FastTester::new(
-        http_client.clone(),
-        key_mgr.clone(),
-        event_tx.clone(),
-        5,
-        mock_server.uri(),
-    ));
+    let tester = Arc::new(
+        FastTester::new(
+            http_client.clone(),
+            key_mgr.clone(),
+            Some(event_tx.clone()),
+        )
+        .with_concurrency(5)
+        .with_base_url(mock_server.uri()),
+    );
 
     let state = Arc::new(AppState {
         config: config.clone(),

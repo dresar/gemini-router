@@ -251,30 +251,34 @@ pub async fn test_single_key(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<TestKeyRequest>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let (status, latency, err) = state
+    let result = state
         .tester
-        .test_single(&payload.id)
+        .test_key_by_id(&payload.id)
         .await
-        .map_err(|e| {
+        .ok_or_else(|| {
             (
-                StatusCode::BAD_REQUEST,
-                Json(json!({"error": format!("Test failed: {e}")})),
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "Key not found"})),
             )
         })?;
 
     Ok(Json(json!({
-        "id": payload.id,
-        "status": status.as_str(),
-        "latency_ms": latency,
-        "error": err
+        "id": result.key_id,
+        "status": result.status.as_str(),
+        "latency_ms": result.latency_ms,
+        "error": result.error_message
     })))
 }
 
 pub async fn test_all_keys(State(state): State<Arc<AppState>>) -> Json<Value> {
-    let queued = state.tester.test_all();
+    let total = state.key_manager.get_keys().len();
+    let tester = Arc::clone(&state.tester);
+    tokio::spawn(async move {
+        tester.test_all_keys().await;
+    });
     Json(json!({
         "status": "started",
-        "total": queued
+        "total": total
     }))
 }
 
