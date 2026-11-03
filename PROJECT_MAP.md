@@ -14,7 +14,10 @@ Production-grade Gemini API Key Router, Load Balancer, Parallel Tester, and anti
 ### Directory Structure & Responsibilities
 - `Cargo.toml`: Root dependencies and crate definitions.
 - `migrations/0001_init.sql`: SQLite schema for `api_keys` and `system_settings`.
-- `static/`: Frontend dashboard (`index.html`, `style.css`, `app.js`).
+- `static/`: Frontend dashboard (ANTISLOP-UI):
+  - `index.html`: Responsive dashboard markup, header, metrics grid, test progress bar, rotation monitor, keys table, modals (login, bulk import, add key, settings).
+  - `style.css`: ANTISLOP-UI developer dark theme (#09090b, #18181b, #27272a, #10b981), mobile touch-friendly (>=44px), zero slop/gradients.
+  - `app.js`: Vanilla JS client, auto-reconnecting SSE to `/admin/events`, Bearer auth, REST handlers, real-time key counter & TXT drag-drop.
 - `src/`:
   - `lib.rs`: Library root exporting admin, config, database, gemini, and key_manager.
   - `main.rs`: Entrypoint, server boot, graceful shutdown.

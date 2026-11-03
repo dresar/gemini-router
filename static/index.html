@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Gemini Key Router</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-container">
+      <div class="header-brand">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">Gemini Key Router</h1>
+          <span class="brand-sub">Production Gateway &amp; Balancer</span>
+        </div>
+      </div>
+
+      <div class="header-meta">
+        <!-- Live SSE Indicator -->
+        <div id="sse-indicator" class="sse-badge disconnected" title="Server-Sent Events Connection">
+          <span class="sse-dot"></span>
+          <span id="sse-text" class="sse-label">SSE: Disconnected</span>
+        </div>
+
+        <!-- Strategy Badge -->
+        <div id="strategy-badge" class="strategy-badge" title="Active Rotation Strategy">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          <span id="active-strategy-name">Strategy: Loading...</span>
+        </div>
+
+        <!-- Header Actions -->
+        <div class="header-actions">
+          <button id="open-settings-btn" class="btn btn-secondary btn-icon" title="Router Settings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span>Settings</span>
+          </button>
+
+          <button id="auth-btn" class="btn btn-secondary btn-icon" title="Authentication">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <span id="auth-btn-label">Login</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+    <!-- Overview Metrics Grid -->
+    <section class="section metrics-section">
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-title">Total Keys</span>
+            <span class="metric-icon muted">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+            </span>
+          </div>
+          <div class="metric-value" id="stat-total-keys">0</div>
+          <div class="metric-footer">Configured API keys</div>
+        </div>
+
+        <div class="metric-card card-accent-emerald">
+          <div class="metric-header">
+            <span class="metric-title">Active</span>
+            <span class="metric-icon emerald">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </span>
+          </div>
+          <div class="metric-value text-emerald" id="stat-active-keys">0</div>
+          <div class="metric-footer">Ready for rotation</div>
+        </div>
+
+        <div class="metric-card card-accent-warning">
+          <div class="metric-header">
+            <span class="metric-title">Rate Limited</span>
+            <span class="metric-icon warning">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </span>
+          </div>
+          <div class="metric-value text-warning" id="stat-rate-limited">0</div>
+          <div class="metric-footer">Temporary cooldown</div>
+        </div>
+
+        <div class="metric-card card-accent-danger">
+          <div class="metric-header">
+            <span class="metric-title">Quota Exhausted</span>
+            <span class="metric-icon danger">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+            </span>
+          </div>
+          <div class="metric-value text-danger" id="stat-quota-exhausted">0</div>
+          <div class="metric-footer">Daily quota limit hit</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-title">Invalid</span>
+            <span class="metric-icon muted">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+            </span>
+          </div>
+          <div class="metric-value text-muted" id="stat-invalid-keys">0</div>
+          <div class="metric-footer">Revoked or corrupted</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-title">Total Requests</span>
+            <span class="metric-icon info">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            </span>
+          </div>
+          <div class="metric-value" id="stat-total-requests">0</div>
+          <div class="metric-footer" id="stat-req-breakdown">0 ok / 0 err</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-title">Success Rate</span>
+            <span class="metric-icon emerald">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            </span>
+          </div>
+          <div class="metric-value text-emerald" id="stat-success-rate">100.0%</div>
+          <div class="metric-footer">Upstream success ratio</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-title">Avg Latency</span>
+            <span class="metric-icon info">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+            </span>
+          </div>
+          <div class="metric-value" id="stat-avg-latency">0 ms</div>
+          <div class="metric-footer">Response time</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Real-time Parallel Test Progress Bar -->
+    <section id="test-progress-section" class="section test-progress-section" style="display: none;">
+      <div class="card progress-card">
+        <div class="progress-header">
+          <div class="progress-info">
+            <span class="spinner-sm"></span>
+            <span class="progress-title" id="test-progress-title">Parallel Fast Tester Running...</span>
+            <span class="progress-details" id="test-progress-details">(0 / 0 keys tested)</span>
+          </div>
+          <div class="progress-actions">
+            <span class="progress-badge" id="test-progress-passed">Passed: 0</span>
+            <span class="progress-badge badge-danger" id="test-progress-failed">Failed: 0</span>
+            <button id="cancel-test-btn" class="btn btn-secondary btn-sm">Dismiss</button>
+          </div>
+        </div>
+        <div class="progress-bar-container">
+          <div id="test-progress-bar" class="progress-bar-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Rotation Monitor & Failover telemetry -->
+    <section class="section rotation-section">
+      <div class="card rotation-card">
+        <div class="rotation-card-header">
+          <div class="rotation-title-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+            </svg>
+            <h2 class="section-title">Rotation &amp; Failover Monitor</h2>
+          </div>
+          <span class="badge badge-outline" id="monitor-strategy-tag">Round Robin</span>
+        </div>
+
+        <div class="rotation-stats-grid">
+          <div class="rotation-stat-item">
+            <span class="stat-label">Total Rotations</span>
+            <span class="stat-num" id="rotation-count">0</span>
+          </div>
+          <div class="rotation-stat-item">
+            <span class="stat-label">Automatic Failovers</span>
+            <span class="stat-num text-warning" id="failover-count">0</span>
+          </div>
+          <div class="rotation-stat-item">
+            <span class="stat-label">Active In-Flight</span>
+            <span class="stat-num" id="in-flight-count">0</span>
+          </div>
+          <div class="rotation-stat-item">
+            <span class="stat-label">Last Dispatched Key</span>
+            <span class="stat-num font-mono text-emerald" id="last-used-key-display">None</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Manager Section -->
+    <section class="section keys-section">
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="toolbar-search">
+          <div class="search-input-wrap">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="search-input" class="input input-search" placeholder="Search by alias or key...">
+            <button id="clear-search-btn" class="clear-search-btn" title="Clear search" style="display: none;">&times;</button>
+          </div>
+
+          <div class="select-wrap">
+            <select id="status-filter" class="select">
+              <option value="ALL">All Statuses</option>
+              <option value="ACTIVE">Active</option>
+              <option value="RATE_LIMITED">Rate Limited</option>
+              <option value="QUOTA_EXHAUSTED">Quota Exhausted</option>
+              <option value="INVALID">Invalid</option>
+              <option value="DISABLED">Disabled</option>
+              <option value="BILLING_ERROR">Billing Error</option>
+              <option value="TEMPORARY_ERROR">Temporary Error</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="toolbar-actions">
+          <button id="open-import-btn" class="btn btn-secondary btn-icon" title="Import bulk keys">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Import Keys</span>
+          </button>
+
+          <button id="open-add-btn" class="btn btn-secondary btn-icon" title="Add a single API key">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>+ Add Key</span>
+          </button>
+
+          <button id="test-all-btn" class="btn btn-primary btn-icon" title="Run fast parallel test across all keys">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            <span id="test-all-label">Test All Keys</span>
+          </button>
+
+          <button id="refresh-keys-btn" class="btn btn-secondary btn-icon-only" title="Refresh list">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6"></path>
+              <path d="M1 20v-6h6"></path>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Keys Table -->
+      <div class="card table-card">
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="th-sortable" data-sort="alias">
+                  <span>Alias / ID</span>
+                  <span class="sort-icon">&varr;</span>
+                </th>
+                <th>Masked API Key</th>
+                <th class="th-sortable" data-sort="status">
+                  <span>Status</span>
+                  <span class="sort-icon">&varr;</span>
+                </th>
+                <th class="th-sortable" data-sort="requests">
+                  <span>Requests (Ok / Err)</span>
+                  <span class="sort-icon">&varr;</span>
+                </th>
+                <th class="th-sortable" data-sort="latency">
+                  <span>Avg Latency</span>
+                  <span class="sort-icon">&varr;</span>
+                </th>
+                <th class="th-sortable" data-sort="cooldown">
+                  <span>Cooldown Expiry</span>
+                  <span class="sort-icon">&varr;</span>
+                </th>
+                <th class="th-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="keys-table-body">
+              <tr>
+                <td colspan="7" class="table-loading">
+                  <div class="loading-wrap">
+                    <span class="spinner-sm"></span>
+                    <span>Loading keys...</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-footer">
+          <span class="footer-count" id="table-count-label">Showing 0 keys</span>
+          <span class="footer-hint">Click key to copy &bull; Actions take effect immediately</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODALS -->
+
+  <!-- 1. Admin Login Modal / Overlay -->
+  <div id="login-modal" class="modal-overlay" style="display: none;">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <h3 class="modal-title">Admin Authentication</h3>
+        </div>
+      </div>
+      <form id="login-form">
+        <div class="modal-body">
+          <p class="modal-desc">Enter the Admin Secret Key to authenticate and access dashboard control APIs.</p>
+          <div id="login-error-alert" class="alert alert-danger" style="display: none;"></div>
+          <div class="form-group">
+            <label for="admin-token-input" class="label">Admin Key / Bearer Token</label>
+            <div class="input-password-wrap">
+              <input type="password" id="admin-token-input" class="input font-mono" placeholder="Enter secret token..." required autocomplete="current-password">
+              <button type="button" id="toggle-token-visibility-btn" class="input-addon-btn" title="Toggle visibility">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
+            <span class="help-text">Corresponds to ADMIN_SECRET_KEY in server environment.</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" id="login-submit-btn" class="btn btn-primary btn-full">
+            <span>Authenticate &amp; Connect</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Modal Bulk Import -->
+  <div id="import-modal" class="modal-overlay" style="display: none;">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <h3 class="modal-title">Bulk Import API Keys</h3>
+        </div>
+        <button class="modal-close-btn" data-close-modal="import-modal">&times;</button>
+      </div>
+      <form id="import-form">
+        <div class="modal-body">
+          <!-- File Drag and Drop Zone -->
+          <div id="drop-zone" class="drop-zone">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="18" x2="12" y2="12"></line>
+              <line x1="9" y1="15" x2="12" y2="12"></line>
+              <line x1="15" y1="15" x2="12" y2="12"></line>
+            </svg>
+            <p class="drop-zone-text">Drag &amp; drop a <code>.txt</code> file here, or <label for="file-upload-input" class="drop-browse-label">browse</label></p>
+            <input type="file" id="file-upload-input" accept=".txt,text/plain" style="display: none;">
+          </div>
+
+          <div class="form-group">
+            <div class="label-row">
+              <label for="bulk-keys-input" class="label">Paste API Keys</label>
+              <span id="detected-keys-count" class="badge badge-emerald">0 keys detected</span>
+            </div>
+            <textarea id="bulk-keys-input" class="textarea font-mono" rows="8" placeholder="Paste Gemini API keys here (AIzaSy...). Supported formats:
+- One key per line
+- Comma separated
+- Space separated"></textarea>
+            <span class="help-text">Duplicates and invalid tokens are automatically detected and deduped.</span>
+          </div>
+
+          <div id="import-feedback" class="alert alert-info" style="display: none;"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="import-modal">Cancel</button>
+          <button type="submit" id="submit-import-btn" class="btn btn-primary" disabled>
+            <span>Import Detected Keys</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Modal Add Single Key -->
+  <div id="add-modal" class="modal-overlay" style="display: none;">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <h3 class="modal-title">Add Single API Key</h3>
+        </div>
+        <button class="modal-close-btn" data-close-modal="add-modal">&times;</button>
+      </div>
+      <form id="add-key-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="new-api-key" class="label">Gemini API Key <span class="text-danger">*</span></label>
+            <input type="text" id="new-api-key" class="input font-mono" placeholder="AIzaSy..." required autocomplete="off">
+            <span class="help-text">Plaintext key is encrypted/hashed upon storage and never logged.</span>
+          </div>
+          <div class="form-group">
+            <label for="new-key-alias" class="label">Key Alias (Optional)</label>
+            <input type="text" id="new-key-alias" class="input" placeholder="e.g. prod-primary-01">
+            <span class="help-text">Friendly identifier to display in tables and reports.</span>
+          </div>
+          <div id="add-feedback" class="alert" style="display: none;"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="add-modal">Cancel</button>
+          <button type="submit" id="submit-add-btn" class="btn btn-primary">
+            <span>Add Key</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. Modal Settings -->
+  <div id="settings-modal" class="modal-overlay" style="display: none;">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <h3 class="modal-title">System Settings</h3>
+        </div>
+        <button class="modal-close-btn" data-close-modal="settings-modal">&times;</button>
+      </div>
+      <form id="settings-form">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="setting-strategy" class="label">Rotation Strategy</label>
+              <select id="setting-strategy" class="select" required>
+                <option value="round_robin">Round Robin (Standard sequential)</option>
+                <option value="least_recently_used">Least Recently Used (LRU)</option>
+                <option value="lowest_failure_rate">Lowest Failure Rate (High reliability)</option>
+                <option value="lowest_latency">Lowest Latency (Fastest response)</option>
+                <option value="weighted">Weighted (Dynamic load distribution)</option>
+              </select>
+              <span class="help-text">Algorithm for choosing the next key on incoming requests.</span>
+            </div>
+
+            <div class="form-group">
+              <label for="setting-concurrency" class="label">Tester Concurrency (1 - 50)</label>
+              <input type="number" id="setting-concurrency" class="input font-mono" min="1" max="50" value="10" required>
+              <span class="help-text">Simultaneous worker threads during parallel key test.</span>
+            </div>
+
+            <div class="form-group">
+              <label for="setting-timeout" class="label">Request Timeout (seconds)</label>
+              <input type="number" id="setting-timeout" class="input font-mono" min="1" max="120" value="30" required>
+              <span class="help-text">Upstream Gemini HTTP request timeout limit.</span>
+            </div>
+
+            <div class="form-group">
+              <label for="setting-retry-budget" class="label">Retry Budget (1 - 10)</label>
+              <input type="number" id="setting-retry-budget" class="input font-mono" min="1" max="10" value="3" required>
+              <span class="help-text">Max failover retry attempts per client request.</span>
+            </div>
+
+            <div class="form-group">
+              <label for="setting-cooldown-ratelimit" class="label">Rate Limit Cooldown (seconds)</label>
+              <input type="number" id="setting-cooldown-ratelimit" class="input font-mono" min="5" max="3600" value="60" required>
+              <span class="help-text">Duration to park a key after HTTP 429 response.</span>
+            </div>
+
+            <div class="form-group">
+              <label for="setting-cooldown-quota" class="label">Quota Cooldown (hours)</label>
+              <input type="number" id="setting-cooldown-quota" class="input font-mono" min="1" max="168" value="24" required>
+              <span class="help-text">Duration to park a key after RESOURCE_EXHAUSTED.</span>
+            </div>
+          </div>
+          <div id="settings-feedback" class="alert" style="display: none;"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="settings-modal">Cancel</button>
+          <button type="submit" id="save-settings-btn" class="btn btn-primary">
+            <span>Save Settings</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Script -->
+  <script src="/static/app.js"></script>
+</body>
+</html>
