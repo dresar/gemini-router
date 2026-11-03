@@ -127,6 +127,8 @@ pub struct KeyRecord {
     pub in_flight: u32,
 }
 
+pub type KeyEntry = KeyRecord;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeyView {
     pub id: String,
@@ -176,6 +178,13 @@ pub enum SystemEvent {
     },
     TestStarted {
         total_keys: usize,
+    },
+    TestProgress {
+        current: usize,
+        total: usize,
+        key_id: String,
+        status: KeyStatus,
+        latency_ms: Option<u64>,
     },
     TestCompleted {
         tested: usize,
