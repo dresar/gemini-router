@@ -226,6 +226,21 @@ impl KeyManager {
         Ok(())
     }
 
+    pub async fn update_alias(&self, id: &str, alias: &str) -> Result<bool, String> {
+        let updated = repository::update_alias(&self.pool, id, alias)
+            .await
+            .map_err(|e| format!("Database error: {e}"))?;
+
+        if updated {
+            let mut keys = self.keys.write();
+            if let Some(k) = keys.iter_mut().find(|k| k.id == id) {
+                k.alias = alias.to_string();
+            }
+        }
+
+        Ok(updated)
+    }
+
     pub async fn delete_key(&self, id: &str) -> Result<bool, String> {
         let deleted = repository::delete_key(&self.pool, id)
             .await

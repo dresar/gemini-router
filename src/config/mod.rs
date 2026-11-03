@@ -14,6 +14,7 @@ pub struct AppConfig {
     pub retry_budget: u32,
     pub cooldown_rate_limit_secs: u64,
     pub cooldown_quota_hours: u64,
+    pub gemini_base_url: String,
 }
 
 impl Default for AppConfig {
@@ -30,6 +31,7 @@ impl Default for AppConfig {
             retry_budget: 3,
             cooldown_rate_limit_secs: 60,
             cooldown_quota_hours: 12,
+            gemini_base_url: "https://generativelanguage.googleapis.com".to_string(),
         }
     }
 }
@@ -71,6 +73,8 @@ impl AppConfig {
             .ok()
             .and_then(|c| c.parse::<u64>().ok())
             .unwrap_or(12);
+        let gemini_base_url = std::env::var("GEMINI_BASE_URL")
+            .unwrap_or_else(|_| "https://generativelanguage.googleapis.com".to_string());
 
         Self {
             host,
@@ -84,6 +88,7 @@ impl AppConfig {
             retry_budget,
             cooldown_rate_limit_secs,
             cooldown_quota_hours,
+            gemini_base_url,
         }
     }
 }

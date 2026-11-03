@@ -19,22 +19,22 @@ Production-grade Gemini API Key Router, Load Balancer, Parallel Tester, and anti
   - `style.css`: ANTISLOP-UI developer dark theme (#09090b, #18181b, #27272a, #10b981), mobile touch-friendly (>=44px), zero slop/gradients.
   - `app.js`: Vanilla JS client, auto-reconnecting SSE to `/admin/events`, Bearer auth, REST handlers, real-time key counter & TXT drag-drop.
 - `src/`:
-  - `lib.rs`: Library root exporting admin, config, database, gemini, and key_manager.
-  - `main.rs`: Entrypoint, server boot, graceful shutdown.
-  - `config/`: Environment configuration and masking utilities.
+  - `lib.rs`: Library root exporting admin, config, database, gemini, key_manager, proxy, rotation, streaming, tester, and AppState.
+  - `main.rs`: Entrypoint, server boot, proxy/admin router mount, static/ file serving, graceful shutdown.
+  - `config/`: Environment configuration, masking utilities, and gemini base url configuration.
   - `database/`: SQLx connection pool & migrations runner.
   - `key_manager/`: SQLite repository & thread-safe in-memory key cache.
   - `rotation/`: 5 rotation strategies (RoundRobin, LRU, LowestFailure, LowestLatency, Weighted), failover & cooldown engine.
   - `tester/`: Parallel tester with Tokio semaphore and Gemini response classifier.
-  - `proxy/`: Transparent Gemini reverse proxy with native chunk streaming and tools preservation.
-  - `streaming/`: Native SSE chunk streamer.
+  - `proxy/`: Transparent Gemini reverse proxy with key rotation, failover, and tools preservation (`handler.rs`, `mod.rs`).
+  - `streaming/`: Native chunked SSE streamer via Reqwest bytes_stream (`sse.rs`, `mod.rs`).
   - `gemini/`: Gemini request/response models and error parser.
-  - `admin/`: REST endpoints for dashboard, bulk import, test triggers, and constant-time auth.
+  - `admin/`: REST endpoints for dashboard, bulk import, test triggers, rotation info, and auth middleware (`handlers.rs`, `auth.rs`, `mod.rs`).
   - `middleware/`: Security, logging with key masking, CORS.
   - `monitoring/`: Real-time telemetry, SSE broadcast channel.
 - `tests/`:
   - `backend_core_tests.rs`: Core unit & integration test suite for database, key repository, auth, and masking.
-  - WireMock test suite for mock upstream Gemini tests.
+  - `proxy_mock_tests.rs`: WireMock integration test suite for generateContent, SSE streaming, failover on 429, tools preservation, and admin auth protection.
 
 ### Roles & Branch Owners
 - AGY01 (Lead Orchestrator): Architecture, worktree coordination, integration merge.
