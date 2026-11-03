@@ -1,9 +1,8 @@
 use axum::{
     body::Body,
-    extract::{Path, Request},
+    extract::Request,
     http::StatusCode,
     response::Response,
-    routing::post,
     Router,
 };
 use chrono::{Duration, Utc};
@@ -280,14 +279,15 @@ async fn test_detection_429_rate_limit_vs_quota_exhaustion() {
 
 #[tokio::test]
 async fn test_execute_with_failover() {
-    let k1 = create_sample_key("k1", KeyStatus::Active, 100.0, 0, 0, None, None);
-    let k2 = create_sample_key("k2", KeyStatus::Active, 100.0, 0, 0, None, None);
-    let k3 = create_sample_key("k3", KeyStatus::Active, 100.0, 0, 0, None, None);
+    let now = Utc::now();
+    let k1 = create_sample_key("k1", KeyStatus::Active, 100.0, 0, 0, Some(now - Duration::minutes(30)), None);
+    let k2 = create_sample_key("k2", KeyStatus::Active, 100.0, 0, 0, Some(now - Duration::minutes(20)), None);
+    let k3 = create_sample_key("k3", KeyStatus::Active, 100.0, 0, 0, Some(now - Duration::minutes(10)), None);
 
     let engine = RotationEngine::new_with_keys(vec![k1, k2, k3]);
 
     let outcome = engine
-        .execute_with_failover(StrategyType::RoundRobin, 3, |key| async move {
+        .execute_with_failover(StrategyType::LeastRecentlyUsed, 3, |key| async move {
             if key.id == "k1" {
                 Err((429, "Rate limit reached".to_string()))
             } else if key.id == "k2" {
@@ -311,7 +311,7 @@ async fn test_execute_with_failover() {
     assert_eq!(key3.status, KeyStatus::Active);
 
     let failed_outcome = engine
-        .execute_with_failover(StrategyType::RoundRobin, 3, |_key| async move {
+        .execute_with_failover(StrategyType::LeastRecentlyUsed, 3, |_key| async move {
             Err::<(String,), _>((429, "All keys exhausted".to_string()))
         })
         .await;
@@ -320,7 +320,7 @@ async fn test_execute_with_failover() {
     assert_eq!(failed_outcome.unwrap_err().status_code, 503);
 }
 
-async fn mock_gemini_handler(Path(model): Path<String>, req: Request<Body>) -> Response<Body> {
+async fn mock_gemini_handler(req: Request<Body>) -> Response<Body> {
     let header_val = req
         .headers()
         .get("x-goog-api-key")
@@ -340,8 +340,6 @@ async fn mock_gemini_handler(Path(model): Path<String>, req: Request<Body>) -> R
             .unwrap_or_default()
             .to_string()
     };
-
-    let _ = model;
 
     if key_val.contains("active") {
         Response::builder()
@@ -386,10 +384,7 @@ async fn mock_gemini_handler(Path(model): Path<String>, req: Request<Body>) -> R
 
 #[tokio::test]
 async fn test_parallel_tester_with_mock_upstream() {
-    let mock_app = Router::new().route(
-        "/v1beta/models/:model:generateContent",
-        post(mock_gemini_handler),
-    );
+    let mock_app = Router::new().fallback(mock_gemini_handler);
 
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let mock_addr: SocketAddr = listener.local_addr().unwrap();

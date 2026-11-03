@@ -230,13 +230,7 @@ impl RotationEngine {
         error_opt: Option<&str>,
     ) {
         let now = Utc::now();
-        let mut new_status = KeyStatus::Active;
-        let mut last_error = None;
-        let mut cooldown_expires_at = None;
-        let mut is_rate_limit = false;
-        let mut is_quota = false;
-
-        {
+        let outcome = {
             let mut keys_guard = self.keys.write();
             let key = match keys_guard.iter_mut().find(|k| k.id == key_id) {
                 Some(k) => k,
@@ -260,12 +254,12 @@ impl RotationEngine {
                 key.last_error = None;
                 key.status = KeyStatus::Active;
                 key.cooldown_expires_at = None;
-                new_status = KeyStatus::Active;
+                (KeyStatus::Active, None, None, false, false)
             } else {
                 key.failed_requests += 1;
                 let err_msg = error_opt.unwrap_or("Unknown error");
                 key.last_error = Some(err_msg.to_string());
-                last_error = key.last_error.clone();
+                let last_error = key.last_error.clone();
                 let err_lower = err_msg.to_lowercase();
 
                 if err_lower.contains("api_key_invalid")
@@ -275,14 +269,14 @@ impl RotationEngine {
                 {
                     key.status = KeyStatus::Invalid;
                     key.cooldown_expires_at = None;
-                    new_status = KeyStatus::Invalid;
+                    (KeyStatus::Invalid, last_error, None, false, false)
                 } else if err_lower.contains("403")
                     || err_lower.contains("billing")
                     || err_lower.contains("permission_denied")
                 {
                     key.status = KeyStatus::BillingError;
                     key.cooldown_expires_at = None;
-                    new_status = KeyStatus::BillingError;
+                    (KeyStatus::BillingError, last_error, None, false, false)
                 } else if err_lower.contains("429")
                     || err_lower.contains("resource_exhausted")
                     || err_lower.contains("rate limit")
@@ -304,9 +298,7 @@ impl RotationEngine {
                         let cooldown_secs = (43200.0 * backoff_mult * jitter) as i64;
                         let expires = Some(now + chrono::Duration::seconds(cooldown_secs));
                         key.cooldown_expires_at = expires;
-                        cooldown_expires_at = expires;
-                        new_status = KeyStatus::QuotaExhausted;
-                        is_quota = true;
+                        (KeyStatus::QuotaExhausted, last_error, expires, false, true)
                     } else {
                         key.rate_limit_count += 1;
                         key.status = KeyStatus::RateLimited;
@@ -319,9 +311,7 @@ impl RotationEngine {
                             (base_secs * backoff_mult * jitter).min(3600.0) as i64;
                         let expires = Some(now + chrono::Duration::seconds(cooldown_secs));
                         key.cooldown_expires_at = expires;
-                        cooldown_expires_at = expires;
-                        new_status = KeyStatus::RateLimited;
-                        is_rate_limit = true;
+                        (KeyStatus::RateLimited, last_error, expires, true, false)
                     }
                 } else if err_lower.contains("503")
                     || err_lower.contains("500")
@@ -333,16 +323,15 @@ impl RotationEngine {
                     let cooldown_secs = (15.0 * jitter) as i64;
                     let expires = Some(now + chrono::Duration::seconds(cooldown_secs));
                     key.cooldown_expires_at = expires;
-                    cooldown_expires_at = expires;
-                    new_status = KeyStatus::TemporaryError;
+                    (KeyStatus::TemporaryError, last_error, expires, false, false)
                 } else {
-                    new_status = key.status;
-                    cooldown_expires_at = key.cooldown_expires_at;
+                    (key.status, last_error, key.cooldown_expires_at, false, false)
                 }
             }
-        }
+        };
 
         if let Some(ref km) = self.key_manager {
+            let (new_status, last_error, cooldown_expires_at, is_rate_limit, is_quota) = outcome;
             let _ = km
                 .update_key_status(key_id, new_status, last_error, cooldown_expires_at)
                 .await;
