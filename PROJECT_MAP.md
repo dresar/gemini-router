@@ -19,7 +19,7 @@ Production-grade Gemini API Key Router, Load Balancer, Parallel Tester, and anti
   - `style.css`: ANTISLOP-UI developer dark theme (#09090b, #18181b, #27272a, #10b981), mobile touch-friendly (>=44px), zero slop/gradients.
   - `app.js`: Vanilla JS client, auto-reconnecting SSE to `/admin/events`, Bearer auth, REST handlers, real-time key counter & TXT drag-drop.
 - `src/`:
-  - `lib.rs`: Library root exporting admin, config, database, gemini, and key_manager.
+  - `lib.rs`: Library root exporting admin, config, database, gemini, key_manager, rotation, and tester.
   - `main.rs`: Entrypoint, server boot, graceful shutdown.
   - `config/`: Environment configuration and masking utilities.
   - `database/`: SQLx connection pool & migrations runner.
@@ -34,6 +34,7 @@ Production-grade Gemini API Key Router, Load Balancer, Parallel Tester, and anti
   - `monitoring/`: Real-time telemetry, SSE broadcast channel.
 - `tests/`:
   - `backend_core_tests.rs`: Core unit & integration test suite for database, key repository, auth, and masking.
+  - `rotation_and_tester_tests.rs`: Rotation strategies, cooldown recovery, 429 classification, failover, and parallel tester mock suite.
   - WireMock test suite for mock upstream Gemini tests.
 
 ### Roles & Branch Owners
